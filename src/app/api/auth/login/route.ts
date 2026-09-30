@@ -11,9 +11,16 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations/auth";
 import { setSessionCookie } from "@/lib/auth";
 
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing", 12);
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
     // --- Validate input -------------------------------------------------------
     const parsed = loginSchema.safeParse(body);
@@ -29,8 +36,9 @@ export async function POST(request: Request) {
     // --- Look up user ---------------------------------------------------------
     const user = await prisma.user.findUnique({ where: { email } });
 
-    // Use a constant-time comparison even on "not found" to prevent timing attacks
-    const hash = user?.passwordHash ?? "$2b$12$invalidhashtopreventtiming";
+    // Compare against a dummy hash when the user doesn't exist,
+    // so response time is similar either way.
+    const hash = user?.passwordHash ?? DUMMY_HASH;
     const valid = await bcrypt.compare(password, hash);
 
     if (!user || !valid) {
