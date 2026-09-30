@@ -44,7 +44,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/issues");
     } catch {
       setGlobalError("Network error. Please try again.");
     } finally {
