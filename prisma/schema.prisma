@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  admin
+  user
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(user)
+
+  // Issues this user created
+  createdIssues  Issue[] @relation("CreatedBy")
+  // Issues assigned to this user
+  assignedIssues Issue[] @relation("AssignedTo")
+  // Comments authored by this user
+  comments       Comment[]
+
+  @@map("users")
+}
+
+model Issue {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?  @db.Text
+  priority    Priority @default(MEDIUM)
+  status      Status   @default(OPEN)
+
+  createdById  Int
+  createdBy    User  @relation("CreatedBy", fields: [createdById], references: [id])
+
+  assignedToId Int?
+  assignedTo   User? @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  comments Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("issues")
+}
+
+model Comment {
+  id      Int    @id @default(autoincrement())
+  body    String @db.Text
+
+  issueId Int
+  issue   Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User  @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("comments")
+}
