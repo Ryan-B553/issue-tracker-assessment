@@ -4,15 +4,17 @@
  * app/(auth)/register/page.tsx
  *
  * Registration page — client component that posts to /api/auth/register
- * and redirects to /dashboard on success.
+ * and redirects to /issues on success.
  */
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [globalError, setGlobalError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +47,7 @@ export default function RegisterPage() {
         return;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       router.push("/issues");
     } catch {
       setGlobalError("Network error. Please try again.");

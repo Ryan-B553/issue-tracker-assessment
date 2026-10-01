@@ -4,15 +4,17 @@
  * app/(auth)/login/page.tsx
  *
  * Login page — client component that posts to /api/auth/login
- * and redirects to /dashboard on success.
+ * and redirects to /issues on success.
  */
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [globalError, setGlobalError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +46,7 @@ export default function LoginPage() {
         return;
       }
 
+      await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       router.push("/issues");
     } catch {
       setGlobalError("Network error. Please try again.");
