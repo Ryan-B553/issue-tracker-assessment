@@ -11,6 +11,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   const SALT_ROUNDS = 12;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const userPassword = process.env.SEED_USER_PASSWORD;
+  if (!adminPassword || !userPassword) {
+    throw new Error("Set SEED_ADMIN_PASSWORD and SEED_USER_PASSWORD");
+  }
+
 
   // ------------------------------------------------------------------
   // Admin user
@@ -22,7 +28,7 @@ async function main() {
     create: {
       name: "Admin User",
       email: adminEmail,
-      passwordHash: await bcrypt.hash("Admin1234!", SALT_ROUNDS),
+      passwordHash: await bcrypt.hash(adminPassword, SALT_ROUNDS),
       role: "admin",
     },
   });
@@ -38,7 +44,7 @@ async function main() {
     create: {
       name: "Standard User",
       email: userEmail,
-      passwordHash: await bcrypt.hash("User1234!", SALT_ROUNDS),
+      passwordHash: await bcrypt.hash(userPassword, SALT_ROUNDS),
       role: "user",
     },
   });

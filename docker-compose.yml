@@ -12,6 +12,23 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://appuser:apppassword@db:3306/issue_tracker
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your .env file}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
 
 volumes:
   db_data:
