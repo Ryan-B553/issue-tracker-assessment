@@ -36,28 +36,30 @@ export function Navbar() {
             Issue Tracker
           </Link>
 
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link
-              href="/dashboard"
-              className={
-                pathname.startsWith("/dashboard")
-                  ? "text-indigo-600 font-semibold"
-                  : "text-gray-600 hover:text-gray-900 transition-colors"
-              }
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/issues"
-              className={
-                pathname.startsWith("/issues")
-                  ? "text-indigo-600 font-semibold"
-                  : "text-gray-600 hover:text-gray-900 transition-colors"
-              }
-            >
-              Issues
-            </Link>
-          </nav>
+          {user && (
+            <nav className="flex items-center gap-4 text-sm font-medium">
+              <Link
+                href="/dashboard"
+                className={
+                  pathname.startsWith("/dashboard")
+                    ? "text-indigo-600 font-semibold"
+                    : "text-gray-600 hover:text-gray-900 transition-colors"
+                }
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/issues"
+                className={
+                  pathname.startsWith("/issues")
+                    ? "text-indigo-600 font-semibold"
+                    : "text-gray-600 hover:text-gray-900 transition-colors"
+                }
+              >
+                Issues
+              </Link>
+            </nav>
+          )}
         </div>
 
         {user && (
