@@ -21,6 +21,11 @@ import {
 } from "recharts";
 import { AuthGuard } from "@/components/AuthGuard";
 import { apiFetch } from "@/lib/api";
+import Link from "next/link";
+import { StatusBadge } from "@/components/StatusBadge";
+import { PriorityBadge } from "@/components/PriorityBadge";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useIssues } from "@/hooks/useIssues";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -96,7 +101,7 @@ function DashboardContent() {
     <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500">
           Overview of issue tracking metrics and workload distributions.
         </p>
@@ -205,6 +210,117 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {/* Assigned to me */}
+      <AssignedToMeSection />
+    </div>
+  );
+}
+
+function AssignedToMeList({ userId }: { userId: number }) {
+  const {
+    data: issues,
+    isLoading,
+    isError,
+    error,
+  } = useIssues({
+    status: "all",
+    priority: "all",
+    assignedToId: userId,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8" role="status" aria-label="Loading">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <span className="sr-only">Loading...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {error instanceof Error ? error.message : "Failed to load assigned issues."}
+      </div>
+    );
+  }
+
+  if (!issues || issues.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-gray-500">
+        Nothing assigned to you
+      </p>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-3 text-left font-semibold text-gray-600">
+              Title
+            </th>
+            <th className="px-4 py-3 text-left font-semibold text-gray-600">
+              Status
+            </th>
+            <th className="px-4 py-3 text-left font-semibold text-gray-600">
+              Priority
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 bg-white">
+          {issues.map((issue) => (
+            <tr key={issue.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3">
+                <Link
+                  href={`/issues/${issue.id}`}
+                  className="font-medium text-gray-900 hover:text-indigo-600 transition-colors"
+                >
+                  {issue.title}
+                </Link>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <StatusBadge status={issue.status} />
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <PriorityBadge priority={issue.priority} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AssignedToMeSection() {
+  const {
+    data: currentUser,
+    isLoading: isUserLoading,
+    isError: isUserError,
+    error: userError,
+  } = useCurrentUser();
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 className="mb-4 text-base font-semibold text-gray-900">
+        Assigned to me
+      </h2>
+
+      {isUserLoading ? (
+        <div className="flex justify-center py-8" role="status" aria-label="Loading">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <span className="sr-only">Loading...</span>
+        </div>
+      ) : isUserError || !currentUser ? (
+        <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {userError instanceof Error ? userError.message : "Failed to load user."}
+        </div>
+      ) : (
+        <AssignedToMeList userId={currentUser.id} />
+      )}
     </div>
   );
 }
