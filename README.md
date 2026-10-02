@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Issue Tracker
 
-## Getting Started
+A full-stack issue tracking app: users register, create and update issues,
+comment, filter, and view a dashboard.
 
-First, run the development server:
+**Live app:** <https://issue-tracker-assessment.onrender.com>
+> Hosted on free tiers: the first request after a period of inactivity can
+> take 30-60 seconds while the server wakes up.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**Demo logins:** <admin and standard user email/passwords, or "sent with my submission">.
+You can also register a new account (new accounts are standard users).
+
+## Tech stack
+Next.js (App Router), React 19, TanStack Query, Tailwind CSS, Recharts,
+Next.js API routes, Prisma 6, MySQL, Docker. Deployed on Render (app) and
+TiDB Cloud (MySQL-compatible database).
+
+## Features
+- Registration and login, with **admin** and **user** roles
+- Create issues, edit them, change status, add comments
+- Filter by status, priority, and assignee
+- Dashboard: total issues, issues by status and by priority (charts), and
+  the issues assigned to you
+
+## Run locally with Docker
+1. Create `.env` in the project root:
 ```
+   JWT_SECRET=<random string, at least 32 characters>
+```
+2. `docker compose up --build` (starts MySQL and the app, and applies migrations)
+3. Open http://localhost:3000
+4. To create the two starter accounts:
+```
+   docker compose exec -e SEED_ADMIN_PASSWORD=<pw> -e SEED_USER_PASSWORD=<pw> app npm run db:seed
+```
+   (or just register through the UI)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run locally without Docker for the app
+1. `docker compose up -d db`
+2. Create `.env`:
+```
+   DATABASE_URL="mysql://appuser:apppassword@localhost:3306/issue_tracker"
+   JWT_SECRET="<random string, at least 32 characters>"
+```
+3. `npm install`, `npx prisma migrate deploy`, `npm run dev`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
+| Name | Purpose |
+|---|---|
+| `DATABASE_URL` | MySQL connection string |
+| `JWT_SECRET` | Signs session tokens (32+ characters, never commit it) |
+| `NODE_ENV` | `production` on the server (makes the cookie `secure`) |
+| `SEED_ADMIN_PASSWORD`, `SEED_USER_PASSWORD` | Used only by `npm run db:seed` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture
+One Next.js codebase: React pages in `src/app`, REST-style API route handlers
+in `src/app/api`, shared logic in `src/lib` (auth, validation, API helper),
+and Prisma for data access (`prisma/schema.prisma`: User, Issue, Comment).
+The browser talks to the API through TanStack Query hooks in `src/hooks`.
 
-## Learn More
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/auth/register`, `/login`, `/logout` | Authentication |
+| `GET /api/auth/me` | Current user |
+| `GET, POST /api/issues` | List (filters) and create |
+| `GET, PATCH /api/issues/[id]` | Read and update |
+| `POST /api/issues/[id]/comments` | Add a comment |
+| `GET /api/users` | Users for the assignee dropdown |
+| `GET /api/dashboard` | Dashboard statistics |
 
-To learn more about Next.js, take a look at the following resources:
+## Design decisions
+- **Permissions are enforced on the server.** Any logged-in user can create
+  issues and comment; only an admin, the creator, or the assignee can edit.
+  The UI hides controls, but the API is the real gate (verified: an unrelated
+  user gets 403).
+- **Sessions:** a signed JWT (HS256, `jose`) in an httpOnly, SameSite cookie,
+  `secure` in production. Passwords are hashed with bcrypt (cost 12). Login
+  compares against a dummy hash when the email is unknown so timing doesn't
+  reveal which emails exist.
+- **Roles can't be self-assigned:** registration ignores any role in the request.
+- **Validation:** every input is validated with zod, with clear 400/401/403/404/422 responses.
+- **Prisma 6:** chosen over 7 because 7 needs a driver adapter for MySQL.
+- **Dashboard counts are computed in the database** (`groupBy`/`count`) instead of in the browser.
+- **Cache:** after each mutation the relevant TanStack Query caches are invalidated so lists stay current.
+- **Docker:** one image; migrations run on container start (`prisma migrate deploy`).
+- **Hosting:** free tiers (Render + TiDB Cloud), hence the cold start.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Known limitations / what I'd improve
+No rate limiting on login, no pagination, no issue deletion, roles are stored
+in the token (a demoted user keeps access until it expires), and no automated tests.
